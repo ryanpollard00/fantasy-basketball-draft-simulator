@@ -98,7 +98,12 @@ CEILING_PERCENTILE = 75
 # ---------------------------------------------------------------------
 # Draft strategy and simulation
 # ---------------------------------------------------------------------
-REPLACEMENT_RANK = 24            # VORP: replacement = about the 24th-best player at a position
+# VORP replacement level
+# "data":  take the top NUM_TEAMS x len(STARTING_SLOTS) players by projection (96),
+#          count how many play each position, and use the next player at that position
+# "fixed": use REPLACEMENT_RANK at every position (for the sensitivity check)
+REPLACEMENT_METHOD = "data"
+REPLACEMENT_RANK = 24            # only used when REPLACEMENT_METHOD = "fixed"
 
 N_SIMULATIONS = 500
 RANDOM_SEED = 42
