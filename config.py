@@ -1,3 +1,9 @@
+"""
+Project settings for the fantasy basketball draft simulator.
+ 
+All tunable settings live here, so scoring, league format and model
+parameters can be changed in one place without editing the code.
+"""
 # ---------------------------------------------------------------------
 # Data
 # ---------------------------------------------------------------------
