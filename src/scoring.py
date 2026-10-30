@@ -26,9 +26,18 @@ def add_missed_shots(df):
     df["FT_MISS"] = df["FTA"] - df["FTM"]
     return df
 
+def add_fantasy_points(df):
+    """Add season fantasy points using the scoring rules in config.SCORING."""
+    df = df.copy()
+    df["FANTASY_PTS"] = 0
+    for stat, points in config.SCORING.items():
+        df["FANTASY_PTS"] += df[stat] * points
+    return df
+
 
 if __name__ == "__main__":
     df = load_player_seasons()
     df = add_missed_shots(df)
-    print(df[["PLAYER_NAME", "SEASON", "FGM", "FGA", "FG_MISS", "FTM", "FTA", "FT_MISS"]].head())
-    print("Negative misses:", (df[["FG_MISS", "FT_MISS"]] < 0).sum().sum())
+    df = add_fantasy_points(df)
+    top = df[df["SEASON"] == config.TEST_SEASON].nlargest(10, "FANTASY_PTS")
+    print(top[["PLAYER_NAME", "GP", "W", "FANTASY_PTS"]].to_string(index=False))
