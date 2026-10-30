@@ -40,12 +40,28 @@ def add_per_game(df):
     df["FANTASY_PPG"] = df["FANTASY_PTS"] / df["GP"]
     return df
 
+def load_players():
+    """Load each player's NBA position listing from the database."""
+    conn = sqlite3.connect(config.DB_PATH)
+    players = pd.read_sql("SELECT PLAYER_ID, POSITION FROM players", conn)
+    conn.close()
+    return players
+
+def add_positions(df, players):
+    """Add each player's fantasy positions, translated from the NBA's G/F/C listing."""
+    df = df.merge(players, on="PLAYER_ID", how="left", validate="many_to_one")
+    df["POSITIONS"] = df["POSITION"].map(config.NBA_POSITION_MAP)
+    df["POSITIONS"] = df["POSITIONS"].apply(lambda p: p if isinstance(p, list) else [])
+    return df
+
 
 if __name__ == "__main__":
     df = load_player_seasons()
     df = add_missed_shots(df)
     df = add_fantasy_points(df)
     df = add_per_game(df)
-    season = df[(df["SEASON"] == config.TEST_SEASON) & (df["MIN"] >= config.MIN_MINUTES)]
-    top = season.nlargest(10, "FANTASY_PPG")
-    print(top[["PLAYER_NAME", "GP", "FANTASY_PTS", "FANTASY_PPG"]].round(1).to_string(index=False))
+    df = add_positions(df, load_players())
+    print(df["POSITION"].value_counts(dropna=False))
+    missing = df[df["POSITIONS"].str.len() == 0]
+    print(f"\nPlayer seasons with no fantasy position: {len(missing)}")
+    print(missing[["PLAYER_NAME", "SEASON", "MIN", "POSITION"]].head(10).to_string(index=False))
