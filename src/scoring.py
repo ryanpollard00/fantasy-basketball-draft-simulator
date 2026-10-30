@@ -34,10 +34,18 @@ def add_fantasy_points(df):
         df["FANTASY_PTS"] += df[stat] * points
     return df
 
+def add_per_game(df):
+    """Add fantasy points per game, which compares players fairly across missed games and shortened seasons."""
+    df = df.copy()
+    df["FANTASY_PPG"] = df["FANTASY_PTS"] / df["GP"]
+    return df
+
 
 if __name__ == "__main__":
     df = load_player_seasons()
     df = add_missed_shots(df)
     df = add_fantasy_points(df)
-    top = df[df["SEASON"] == config.TEST_SEASON].nlargest(10, "FANTASY_PTS")
-    print(top[["PLAYER_NAME", "GP", "W", "FANTASY_PTS"]].to_string(index=False))
+    df = add_per_game(df)
+    season = df[(df["SEASON"] == config.TEST_SEASON) & (df["MIN"] >= config.MIN_MINUTES)]
+    top = season.nlargest(10, "FANTASY_PPG")
+    print(top[["PLAYER_NAME", "GP", "FANTASY_PTS", "FANTASY_PPG"]].round(1).to_string(index=False))
