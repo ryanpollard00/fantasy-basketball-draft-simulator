@@ -4,6 +4,7 @@ Project settings for the fantasy basketball draft simulator.
 All tunable settings live here, so scoring, league format and model
 parameters can be changed in one place without editing the code.
 """
+from pathlib import Path
 # ---------------------------------------------------------------------
 # Data
 # ---------------------------------------------------------------------
@@ -14,7 +15,8 @@ SEASONS = [
 TRAIN_TARGET_SEASONS = ["2021-22", "2022-23", "2023-24", "2024-25"]
 TEST_SEASON = "2025-26"          # backtest season: projected, then scored on actual results
 
-DB_PATH = "data/fantasy.db"      # SQLite database file (not committed to GitHub)
+PROJECT_ROOT = Path(__file__).resolve().parent
+DB_PATH = PROJECT_ROOT / "data" / "fantasy.db"   # SQLite database file (not committed to GitHub)
 API_PAUSE_SECONDS = 1.5          # pause between nba_api calls (stats.nba.com rate-limits)
 API_RETRIES = 3                  # retries if a call times out
 MIN_MINUTES = 500                # drop players with fewer season minutes than this
