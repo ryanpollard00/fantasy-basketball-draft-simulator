@@ -25,6 +25,7 @@ MIN_MINUTES = 500                # drop players with fewer season minutes than t
 # Scoring (points league)
 # Keys match the column names returned by nba_api's LeagueDashPlayerStats.
 # FG_MISS and FT_MISS are calculated: FGA - FGM and FTA - FTM.
+# W = wins in games the player played.
 # ---------------------------------------------------------------------
 SCORING = {
     "PTS": 1,
