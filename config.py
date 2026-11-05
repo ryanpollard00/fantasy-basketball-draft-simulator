@@ -89,13 +89,14 @@ LONG_TERM_WEIGHTS = [0.5, 0.3, 0.2]   # most recent season first (strategy 2)
 RF_PARAMS = {
     "n_estimators": 300,          # number of trees; their spread gives floor/ceiling
     "min_samples_leaf": 5,
+    "max_features": 0.5,          # chosen by cross-validation
     "random_state": 42,
     "n_jobs": -1,
 }
 XGB_PARAMS = {
     "n_estimators": 300,
-    "learning_rate": 0.05,
-    "max_depth": 4,
+    "learning_rate": 0.03,        # chosen by cross-validation
+    "max_depth": 2,               # chosen by cross-validation
     "subsample": 0.8,
     "colsample_bytree": 0.8,
     "random_state": 42,
