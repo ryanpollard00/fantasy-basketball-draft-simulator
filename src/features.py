@@ -26,6 +26,17 @@ FEATURE_STATS = ["FANTASY_PTS", "FANTASY_PPG", "GP_SHARE", "MPG", "MIN", "WIN_PC
 # Stats averaged over the last three seasons
 AVERAGED_STATS = ["FANTASY_PTS", "FANTASY_PPG", "GP_SHARE", "MPG"]
 
+# Model inputs: all from seasons before the target season
+MODEL_FEATURES = [
+    "FANTASY_PPG_LAG1", "GP_SHARE_LAG1", "MPG_LAG1",
+    "FANTASY_PPG_AVG3", "GP_SHARE_AVG3", "MPG_AVG3",
+    "AGE_IN_SEASON", "WIN_PCT_LAG1", "SEASONS_OF_HISTORY",
+]
+# Naive projections drafted by strategies 1 and 2
+BASELINE_COLUMNS = ["FANTASY_PTS_LAG1", "FANTASY_PTS_AVG3"]
+ID_COLUMNS = ["PLAYER_ID", "PLAYER_NAME", "SEASON", "POSITIONS"]
+TARGET = "TARGET_PTS"
+
 
 def load_team_seasons():
     """Load each team's games played and win % for every season."""
@@ -93,11 +104,21 @@ def add_weighted_averages(df):
     df["SEASONS_OF_HISTORY"] = sum(df[f"FANTASY_PTS_LAG{k}"].notna() for k in range(1, 4))
     return df
 
-if __name__ == "__main__":
+
+def build_model_table():
+    """One row per qualified player per target season: IDs, features, naive baselines and the target."""
     base = add_season_number(build_base_table())
     df = add_weighted_averages(add_history(base))
-    test = df[df["SEASON"] == config.TEST_SEASON]
-    columns = ["PLAYER_NAME", "FANTASY_PTS_LAG1", "FANTASY_PTS_LAG2", "FANTASY_PTS_LAG3", "FANTASY_PTS_AVG3"]
-    print(test.nlargest(5, "FANTASY_PTS_AVG3")[columns].round(0).to_string(index=False))
-    print(f"\nSeasons of history, {config.TEST_SEASON} rows:")
-    print(test["SEASONS_OF_HISTORY"].value_counts().sort_index())
+    target_seasons = config.TRAIN_TARGET_SEASONS + [config.TEST_SEASON]
+    df = df[df["SEASON"].isin(target_seasons) & (df["MIN_LAG1"] >= config.MIN_MINUTES)].copy()
+    df["AGE_IN_SEASON"] = df["AGE_LAG1"] + 1
+    df = df.rename(columns={"FANTASY_PTS": TARGET})
+    return df[ID_COLUMNS + MODEL_FEATURES + BASELINE_COLUMNS + [TARGET]].reset_index(drop=True)
+
+if __name__ == "__main__":
+    model_table = build_model_table()
+    print(model_table.shape)
+    print("\nRows per target season:")
+    print(model_table["SEASON"].value_counts().sort_index())
+    print("\nMissing values per column:", model_table.isna().sum().sum())
+    print(model_table.head(3).T)
