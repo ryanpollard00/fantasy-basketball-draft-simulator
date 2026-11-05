@@ -20,6 +20,9 @@ from src.scoring import (
     load_players,
 )
 
+# Stats carried forward from earlier seasons as model inputs
+FEATURE_STATS = ["FANTASY_PTS", "FANTASY_PPG", "GP_SHARE", "MPG", "MIN", "WIN_PCT", "AGE"]
+
 
 def load_team_seasons():
     """Load each team's games played and win % for every season."""
@@ -51,8 +54,24 @@ def build_base_table():
     return df
 
 
+def add_season_number(df):
+    """Number the seasons in order (2018-19 = 0) so earlier seasons can be found by subtraction."""
+    df = df.copy()
+    df["SEASON_NUM"] = df["SEASON"].map({season: i for i, season in enumerate(config.SEASONS)})
+    return df
+
+
+def lagged_stats(base, years_back):
+    """Each player's stats from `years_back` seasons earlier, labeled with the season they lead into."""
+    lagged = base[["PLAYER_ID", "SEASON_NUM"] + FEATURE_STATS].copy()
+    lagged["SEASON_NUM"] += years_back
+    return lagged.rename(columns={stat: f"{stat}_LAG{years_back}" for stat in FEATURE_STATS})
+
+
 if __name__ == "__main__":
-    base = build_base_table()
-    print(base.shape)
-    print("Player seasons with no team match:", base["TEAM_GAMES"].isna().sum())
-    print(base[["FANTASY_PPG", "GP_SHARE", "MPG", "WIN_PCT"]].describe().round(2))
+    base = add_season_number(build_base_table())
+    last_season = lagged_stats(base, 1)
+    check = base.merge(last_season, on=["PLAYER_ID", "SEASON_NUM"], how="inner")
+    print(check[["PLAYER_NAME", "SEASON", "FANTASY_PPG", "FANTASY_PPG_LAG1", "AGE", "AGE_LAG1"]].head(8).to_string(index=False))
+    print("\nAge minus last season's age:")
+    print((check["AGE"] - check["AGE_LAG1"]).value_counts())
