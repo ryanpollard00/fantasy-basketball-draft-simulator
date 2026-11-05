@@ -23,6 +23,9 @@ from src.scoring import (
 # Stats carried forward from earlier seasons as model inputs
 FEATURE_STATS = ["FANTASY_PTS", "FANTASY_PPG", "GP_SHARE", "MPG", "MIN", "WIN_PCT", "AGE"]
 
+# Stats averaged over the last three seasons
+AVERAGED_STATS = ["FANTASY_PTS", "FANTASY_PPG", "GP_SHARE", "MPG"]
+
 
 def load_team_seasons():
     """Load each team's games played and win % for every season."""
@@ -68,10 +71,33 @@ def lagged_stats(base, years_back):
     return lagged.rename(columns={stat: f"{stat}_LAG{years_back}" for stat in FEATURE_STATS})
 
 
+def add_history(base):
+    """Attach each player's stats from the previous three seasons (missing seasons stay empty)."""
+    df = base
+    for years_back in range(1, len(config.LONG_TERM_WEIGHTS) + 1):
+        df = df.merge(lagged_stats(base, years_back), on=["PLAYER_ID", "SEASON_NUM"], how="left", validate="one_to_one")
+    return df
+
+
+def add_weighted_averages(df):
+    """Add 3-season weighted averages using config.LONG_TERM_WEIGHTS, over only the seasons a player has."""
+    df = df.copy()
+    for stat in AVERAGED_STATS:
+        weighted_sum = 0
+        weight_used = 0
+        for years_back, weight in enumerate(config.LONG_TERM_WEIGHTS, start=1):
+            values = df[f"{stat}_LAG{years_back}"]
+            weighted_sum += values.fillna(0) * weight
+            weight_used += values.notna() * weight
+        df[f"{stat}_AVG3"] = weighted_sum / weight_used
+    df["SEASONS_OF_HISTORY"] = sum(df[f"FANTASY_PTS_LAG{k}"].notna() for k in range(1, 4))
+    return df
+
 if __name__ == "__main__":
     base = add_season_number(build_base_table())
-    last_season = lagged_stats(base, 1)
-    check = base.merge(last_season, on=["PLAYER_ID", "SEASON_NUM"], how="inner")
-    print(check[["PLAYER_NAME", "SEASON", "FANTASY_PPG", "FANTASY_PPG_LAG1", "AGE", "AGE_LAG1"]].head(8).to_string(index=False))
-    print("\nAge minus last season's age:")
-    print((check["AGE"] - check["AGE_LAG1"]).value_counts())
+    df = add_weighted_averages(add_history(base))
+    test = df[df["SEASON"] == config.TEST_SEASON]
+    columns = ["PLAYER_NAME", "FANTASY_PTS_LAG1", "FANTASY_PTS_LAG2", "FANTASY_PTS_LAG3", "FANTASY_PTS_AVG3"]
+    print(test.nlargest(5, "FANTASY_PTS_AVG3")[columns].round(0).to_string(index=False))
+    print(f"\nSeasons of history, {config.TEST_SEASON} rows:")
+    print(test["SEASONS_OF_HISTORY"].value_counts().sort_index())
