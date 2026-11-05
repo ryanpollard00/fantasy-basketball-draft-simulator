@@ -116,3 +116,14 @@ REPLACEMENT_RANK = 24            # only used when REPLACEMENT_METHOD = "fixed"
 
 N_SIMULATIONS = 500
 RANDOM_SEED = 42
+
+# Hyperparameter search grids (time-based cross-validation on the training seasons)
+RF_PARAM_GRID = {
+    "min_samples_leaf": [5, 10, 20],
+    "max_features": [0.33, 0.5, 1.0],
+}
+XGB_PARAM_GRID = {
+    "max_depth": [2, 3, 4],
+    "learning_rate": [0.03, 0.05],
+    "n_estimators": [150, 300, 600],
+}
