@@ -105,9 +105,14 @@ def add_weighted_averages(df):
     return df
 
 
-def build_model_table():
-    """One row per qualified player per target season: IDs, features, naive baselines and the target."""
-    base = add_season_number(build_base_table())
+def build_model_table(base=None):
+    """One row per qualified player per target season: IDs, features, naive baselines and the target.
+
+    `base` defaults to the full table from the database; tests can pass in a modified copy.
+    """
+    if base is None:
+        base = build_base_table()
+    base = add_season_number(base)
     df = add_weighted_averages(add_history(base))
     target_seasons = config.TRAIN_TARGET_SEASONS + [config.TEST_SEASON]
     df = df[df["SEASON"].isin(target_seasons) & (df["MIN_LAG1"] >= config.MIN_MINUTES)].copy()
@@ -115,10 +120,17 @@ def build_model_table():
     df = df.rename(columns={"FANTASY_PTS": TARGET})
     return df[ID_COLUMNS + MODEL_FEATURES + BASELINE_COLUMNS + [TARGET]].reset_index(drop=True)
 
+
+def split_by_season(model_table):
+    """Split rows into the training seasons and the held-out test season."""
+    train = model_table[model_table["SEASON"].isin(config.TRAIN_TARGET_SEASONS)].reset_index(drop=True)
+    test = model_table[model_table["SEASON"] == config.TEST_SEASON].reset_index(drop=True)
+    return train, test
+
 if __name__ == "__main__":
     model_table = build_model_table()
-    print(model_table.shape)
-    print("\nRows per target season:")
-    print(model_table["SEASON"].value_counts().sort_index())
-    print("\nMissing values per column:", model_table.isna().sum().sum())
-    print(model_table.head(3).T)
+    train, test = split_by_season(model_table)
+    print(f"Train: {len(train)} rows from {sorted(train['SEASON'].unique())}")
+    print(f"Test:  {len(test)} rows from {sorted(test['SEASON'].unique())}")
+    print("Rows in neither:", len(model_table) - len(train) - len(test))
+    print("Missing values:", model_table.isna().sum().sum())
